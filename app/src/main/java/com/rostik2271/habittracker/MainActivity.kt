@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             HabitTrackerTheme {
-                Surface(color = MaterialTheme.colorScheme.background) {
+                Surface(color = MaterialTheme.colorScheme.surface) {
                     HabitTrackerApp(viewModel)
                 }
             }
