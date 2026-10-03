@@ -57,10 +57,8 @@ fun HabitDetailScreen(
     viewModel: HabitViewModel,
     onBack: () -> Unit
 ) {
-    val habit = remember(habitId) {
-        viewModel.allHabits.collectAsState(initial = emptyList()).value
-            .find { it.id == habitId }
-    }
+    val habits by viewModel.allHabits.collectAsState(initial = emptyList())
+    val habit = habits.find { it.id == habitId }
 
     if (habit == null) {
         Box(
