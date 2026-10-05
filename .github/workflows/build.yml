@@ -24,10 +24,20 @@ jobs:
         with:
           gradle-version: '8.2'
 
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/release.jks
+          ls -la ${{ github.workspace }}/release.jks
+
       - name: Generate Gradle wrapper
         run: gradle wrapper --gradle-version 8.2
 
       - name: Build Debug APK
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace --no-daemon
