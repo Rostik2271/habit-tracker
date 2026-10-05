@@ -8,5 +8,6 @@ data class Habit(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
+    val color: Int = 0xFF2196F3.toInt(),
     val createdAt: Long = System.currentTimeMillis()
 )

@@ -8,12 +8,8 @@ import com.rostik2271.habittracker.data.Completion
 import com.rostik2271.habittracker.data.Habit
 import com.rostik2271.habittracker.repository.HabitRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 class HabitViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -29,9 +25,9 @@ class HabitViewModel(application: Application) : AndroidViewModel(application) {
     fun getCompletionsForHabit(habitId: Long): Flow<List<Completion>> =
         repository.getCompletionsForHabit(habitId)
 
-    fun addHabit(name: String) {
+    fun addHabitWithColor(name: String, color: Int) {
         viewModelScope.launch {
-            repository.insertHabit(Habit(name = name.trim()))
+            repository.insertHabit(Habit(name = name.trim(), color = color))
         }
     }
 
@@ -59,9 +55,5 @@ class HabitViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
-    }
-
-    suspend fun isCompleted(habitId: Long, date: LocalDate): Boolean {
-        return repository.getCompletion(habitId, date.toString()) != null
     }
 }

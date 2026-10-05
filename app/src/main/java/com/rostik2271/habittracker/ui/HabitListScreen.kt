@@ -1,5 +1,7 @@
 package com.rostik2271.habittracker.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,10 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,12 +41,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rostik2271.habittracker.data.Habit
 import com.rostik2271.habittracker.viewmodel.HabitViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+
+val habitColorPalette = listOf(
+    0xFF2196F3.toInt(),
+    0xFF4CAF50.toInt(),
+    0xFFFFEB3B.toInt(),
+    0xFFFF9800.toInt(),
+    0xFFF44336.toInt(),
+    0xFF9C27B0.toInt(),
+    0xFFE91E63.toInt(),
+    0xFF00BCD4.toInt()
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,8 +112,8 @@ fun HabitListScreen(
     if (showAddDialog) {
         AddHabitDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { name ->
-                viewModel.addHabit(name)
+            onConfirm = { name, color ->
+                viewModel.addHabitWithColor(name, color)
                 showAddDialog = false
             }
         )
@@ -140,6 +155,7 @@ fun HabitItem(
         .collectAsState(initial = emptyList())
 
     val isCompletedToday = completions.any { it.date == today.toString() }
+    val habitColor = Color(habit.color)
 
     Card(
         modifier = Modifier
@@ -147,9 +163,9 @@ fun HabitItem(
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = if (isCompletedToday)
-                MaterialTheme.colorScheme.primaryContainer
+                habitColor.copy(alpha = 0.35f)
             else
-                MaterialTheme.colorScheme.surfaceVariant
+                habitColor.copy(alpha = 0.15f)
         )
     ) {
         Row(
@@ -159,18 +175,30 @@ fun HabitItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { viewModel.toggleCompletion(habit.id) }) {
-                Icon(
-                    imageVector = if (isCompletedToday)
-                        Icons.Default.CheckCircle
-                    else
-                        Icons.Default.CheckCircle,
-                    contentDescription = "Отметить",
-                    tint = if (isCompletedToday)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(32.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isCompletedToday) habitColor
+                            else Color.Transparent
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = habitColor,
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isCompletedToday) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Выполнено",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -208,25 +236,59 @@ fun EmptyState() {
 @Composable
 fun AddHabitDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String, Int) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
+    var selectedColor by remember { mutableStateOf(habitColorPalette[0]) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Новая привычка") },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Название привычки") },
-                singleLine = true
-            )
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Название привычки") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Цвет привычки",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    habitColorPalette.forEach { color ->
+                        val isSelected = color == selectedColor
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(color))
+                                .border(
+                                    width = if (isSelected) 3.dp else 0.dp,
+                                    color = if (isSelected)
+                                        MaterialTheme.colorScheme.onSurface
+                                    else
+                                        Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .clickable { selectedColor = color }
+                        )
+                    }
+                }
+            }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (name.isNotBlank()) onConfirm(name)
+                    if (name.isNotBlank()) onConfirm(name, selectedColor)
                 },
                 enabled = name.isNotBlank()
             ) {
