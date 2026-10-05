@@ -12,14 +12,14 @@ android {
         applicationId = "com.rostik2271.habittracker"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     signingConfigs {
         create("release") {
             val keystorePath = System.getenv("KEYSTORE_PATH")
-            if (keystorePath != null && file(keystorePath).exists()) {
+            if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
                 storeFile = file(keystorePath)
                 storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
                 keyAlias = System.getenv("KEY_ALIAS") ?: ""
@@ -30,13 +30,15 @@ android {
 
     buildTypes {
         debug {
-            if (file(System.getenv("KEYSTORE_PATH") ?: "").exists()) {
+            val keystorePath = System.getenv("KEYSTORE_PATH")
+            if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
         release {
             isMinifyEnabled = false
-            if (file(System.getenv("KEYSTORE_PATH") ?: "").exists()) {
+            val keystorePath = System.getenv("KEYSTORE_PATH")
+            if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
