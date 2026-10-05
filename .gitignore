@@ -22,3 +22,4 @@ release/
 *.keystore
 keystore-base64.txt
 release.jks
+keystore-v2-base64.txt
