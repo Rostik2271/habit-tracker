@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.rostik2271.habittracker.ui.HabitDetailScreen
 import com.rostik2271.habittracker.ui.HabitListScreen
+import com.rostik2271.habittracker.ui.MonthOverviewScreen
 import com.rostik2271.habittracker.viewmodel.HabitViewModel
 
 class MainActivity : ComponentActivity() {
@@ -42,6 +43,9 @@ fun HabitTrackerApp(viewModel: HabitViewModel) {
                 viewModel = viewModel,
                 onHabitClick = { habitId ->
                     navController.navigate("detail/$habitId")
+                },
+                onMonthClick = {
+                    navController.navigate("month")
                 }
             )
         }
@@ -49,6 +53,12 @@ fun HabitTrackerApp(viewModel: HabitViewModel) {
             val habitId = backStackEntry.arguments?.getString("habitId")?.toLongOrNull() ?: 0L
             HabitDetailScreen(
                 habitId = habitId,
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("month") {
+            MonthOverviewScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() }
             )

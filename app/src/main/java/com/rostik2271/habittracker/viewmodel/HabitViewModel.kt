@@ -21,6 +21,7 @@ class HabitViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     val allHabits: Flow<List<Habit>> = repository.getAllHabits()
+    val allCompletions: Flow<List<Completion>> = repository.getAllCompletions()
 
     fun getCompletionsForHabit(habitId: Long): Flow<List<Completion>> =
         repository.getCompletionsForHabit(habitId)
@@ -55,5 +56,9 @@ class HabitViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
+    }
+
+    suspend fun isCompletedOnDate(habitId: Long, date: LocalDate): Boolean {
+        return repository.getCompletion(habitId, date.toString()) != null
     }
 }

@@ -44,6 +44,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rostik2271.habittracker.data.Habit
+import com.rostik2271.habittracker.util.calculateBestStreak
+import com.rostik2271.habittracker.util.calculateCurrentStreak
+import com.rostik2271.habittracker.util.completionsToDates
+import com.rostik2271.habittracker.util.pluralDays
 import com.rostik2271.habittracker.viewmodel.HabitViewModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -88,7 +92,7 @@ fun HabitDetailContent(
         .getCompletionsForHabit(habit.id)
         .collectAsState(initial = emptyList())
 
-    val completedDates = completions.map { LocalDate.parse(it.date) }.toSet()
+    val completedDates = completionsToDates(completions)
 
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -116,6 +120,15 @@ fun HabitDetailContent(
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            HabitStreakLineChart(
+                habitColor = habit.color,
+                completedDates = completedDates,
+                daysCount = 30,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             StatisticsCard(habit = habit, completedDates = completedDates)
             Spacer(modifier = Modifier.height(16.dp))
             MonthSelector(
@@ -198,50 +211,6 @@ fun StatRow(label: String, value: String) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
-}
-
-fun pluralDays(n: Int): String {
-    val mod10 = n % 10
-    val mod100 = n % 100
-    return when {
-        mod100 in 11..14 -> "дней"
-        mod10 == 1 -> "день"
-        mod10 in 2..4 -> "дня"
-        else -> "дней"
-    }
-}
-
-fun calculateCurrentStreak(completedDates: Set<LocalDate>, today: LocalDate): Int {
-    var streak = 0
-    var day = today
-    while (completedDates.contains(day)) {
-        streak++
-        day = day.minusDays(1)
-    }
-    if (streak == 0 && completedDates.contains(today.minusDays(1))) {
-        day = today.minusDays(1)
-        while (completedDates.contains(day)) {
-            streak++
-            day = day.minusDays(1)
-        }
-    }
-    return streak
-}
-
-fun calculateBestStreak(completedDates: Set<LocalDate>): Int {
-    if (completedDates.isEmpty()) return 0
-    val sorted = completedDates.sorted()
-    var best = 1
-    var current = 1
-    for (i in 1 until sorted.size) {
-        if (sorted[i] == sorted[i - 1].plusDays(1)) {
-            current++
-            if (current > best) best = current
-        } else {
-            current = 1
-        }
-    }
-    return best
 }
 
 @Composable

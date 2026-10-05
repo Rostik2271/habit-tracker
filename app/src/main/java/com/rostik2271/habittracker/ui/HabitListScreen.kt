@@ -21,6 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,8 +48,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.rostik2271.habittracker.data.Completion
 import com.rostik2271.habittracker.data.Habit
+import com.rostik2271.habittracker.util.calculateCurrentStreak
+import com.rostik2271.habittracker.util.completionsToDates
 import com.rostik2271.habittracker.viewmodel.HabitViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -66,10 +73,13 @@ val habitColorPalette = listOf(
 @Composable
 fun HabitListScreen(
     viewModel: HabitViewModel,
-    onHabitClick: (Long) -> Unit
+    onHabitClick: (Long) -> Unit,
+    onMonthClick: () -> Unit
 ) {
     val habits by viewModel.allHabits.collectAsState(initial = emptyList())
+    val allCompletions by viewModel.allCompletions.collectAsState(initial = emptyList())
     var showAddDialog by remember { mutableStateOf(false) }
+    var weekStart by remember { mutableStateOf(getWeekStart(LocalDate.now())) }
 
     Scaffold(
         topBar = {
@@ -83,6 +93,11 @@ fun HabitListScreen(
                             ),
                             style = MaterialTheme.typography.bodySmall
                         )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onMonthClick) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Месяц")
                     }
                 }
             )
@@ -101,9 +116,12 @@ fun HabitListScreen(
             if (habits.isEmpty()) {
                 EmptyState()
             } else {
-                HabitList(
+                HabitListWithChart(
                     habits = habits,
+                    allCompletions = allCompletions,
                     viewModel = viewModel,
+                    weekStart = weekStart,
+                    onWeekChange = { weekStart = it },
                     onHabitClick = onHabitClick
                 )
             }
@@ -121,26 +139,155 @@ fun HabitListScreen(
     }
 }
 
+fun getWeekStart(date: LocalDate): LocalDate {
+    val dayOfWeek = date.dayOfWeek.value
+    return date.minusDays((dayOfWeek - 1).toLong())
+}
+
 @Composable
-fun HabitList(
+fun HabitListWithChart(
     habits: List<Habit>,
+    allCompletions: List<Completion>,
     viewModel: HabitViewModel,
+    weekStart: LocalDate,
+    onWeekChange: (LocalDate) -> Unit,
     onHabitClick: (Long) -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(habits, key = { it.id }) { habit ->
-            HabitItem(
-                habit = habit,
-                viewModel = viewModel,
-                onClick = { onHabitClick(habit.id) }
-            )
+    val today = LocalDate.now()
+
+    val weekDates = (0..6).map { weekStart.plusDays(it.toLong()) }
+
+    val completionsByHabit: Map<Long, Set<LocalDate>> = habits.associate { habit ->
+        habit.id to completionsToDates(
+            allCompletions.filter { it.habitId == habit.id }
+        )
+    }
+
+    val streaks: Map<Long, Int> = habits.associate { habit ->
+        val dates = completionsByHabit[habit.id] ?: emptySet()
+        habit.id to calculateCurrentStreak(dates, today)
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        WeekPanel(
+            weekDates = weekDates,
+            completionsByHabit = completionsByHabit,
+            onPrevious = { onWeekChange(weekStart.minusWeeks(1)) },
+            onNext = { onWeekChange(weekStart.plusWeeks(1)) }
+        )
+
+        HabitStreakBarChart(
+            habits = habits,
+            streaks = streaks,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(habits, key = { it.id }) { habit ->
+                HabitItem(
+                    habit = habit,
+                    viewModel = viewModel,
+                    onClick = { onHabitClick(habit.id) }
+                )
+            }
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
-        item { Spacer(modifier = Modifier.height(80.dp)) }
+    }
+}
+
+@Composable
+fun WeekPanel(
+    weekDates: List<LocalDate>,
+    completionsByHabit: Map<Long, Set<LocalDate>>,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
+) {
+    val today = LocalDate.now()
+    val dayLabels = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onPrevious) {
+                    Icon(Icons.Default.ChevronLeft, contentDescription = "Назад")
+                }
+                Text(
+                    text = "${weekDates.first().format(DateTimeFormatter.ofPattern("d MMM"))} — ${weekDates.last().format(DateTimeFormatter.ofPattern("d MMM"))}",
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onNext) {
+                    Icon(Icons.Default.ChevronRight, contentDescription = "Вперёд")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                weekDates.forEachIndexed { index, date ->
+                    val isToday = date == today
+                    val anyCompleted = completionsByHabit.values.any { it.contains(date) }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = dayLabels[index],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = date.dayOfMonth.toString(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isToday)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (anyCompleted)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        Color.Transparent
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (anyCompleted)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

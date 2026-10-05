@@ -20,6 +20,9 @@ class HabitRepository(private val habitDao: HabitDao) {
     fun getCompletionsForHabit(habitId: Long): Flow<List<Completion>> =
         habitDao.getCompletionsForHabit(habitId)
 
+    fun getAllCompletions(): Flow<List<Completion>> =
+        habitDao.getAllCompletions()
+
     suspend fun getCompletion(habitId: Long, date: String): Completion? =
         habitDao.getCompletion(habitId, date)
 
